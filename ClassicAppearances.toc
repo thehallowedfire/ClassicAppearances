@@ -1,0 +1,11 @@
+## Title: Classic Appearances
+## Notes: Shows all appearances in the game
+## Author: Vladislav Kondrashov
+## Version: 1.0
+
+CA_Wardrobe.xml
+CA_DB.lua
+CA_Utils.lua
+CA_UI.lua
+
+CA_Init.lua
