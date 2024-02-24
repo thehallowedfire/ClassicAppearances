@@ -469,6 +469,7 @@ function CA_ItemsModelMixin:OnEnter()
 					local _, link = GetItemInfo(item_id_received)
 					text = link
 					self.item_link = link
+					NON_EXISTING_ITEMS_CACHE[item_id_received] = nil
 				end
 				tooltip_line_left:SetText(text)
 				GameTooltip:Show()
