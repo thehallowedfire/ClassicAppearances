@@ -187,11 +187,12 @@ function CA_ItemsCollectionMixin:CreateSlotButtons()
 end
 
 function CA_ItemsCollectionMixin:OnShow()
-	self:UpdateWeaponDropDown();
+	--self:UpdateWeaponDropDown();
 	self:SetActiveSlot(self.default_category)
 end
 
 function CA_ItemsCollectionMixin:UpdateWeaponDropDown()
+	print("DEBUG UpdateWeaponDropDown")
 	local dropdown = self.WeaponDropDown;
 	local name, isWeapon = app.GetCategoryInfo(self.active_category_id);
 	if ( not isWeapon ) then
@@ -213,7 +214,7 @@ end
 
 function CA_ItemsCollectionMixin:SetActiveSlot(category)
 	local category_id = app.GetCategoryID(category)
-	if category_id ~= self.active_category_id then
+	if category_id ~= self.active_category_id or self.needs_reload then
 		self.active_slot = category
 
 		if category == "MAINHANDSLOT" then
@@ -235,24 +236,29 @@ end
 
 function CA_ItemsCollectionMixin:SetActiveCategory(category_id)
 	local previousCategory = self.active_category_id;
-	if self.active_category_id ~= category_id then
+	if self.active_category_id ~= category_id or self.needs_reload then
 		self.active_category_id = category_id
 		self:RefreshVisualsList(category_id);
 		for i=1, #self.Models do
 			local model = self.Models[i]
 			model:Reload(category_id)
 		end
+
+		-- progress bar
+		self:UpdateProgressBar();
+
 		-- Not needed. Items get updated when resetting page which happens when user switches category
 		--[[ self:UpdateItems(); ]]
 	end
 	self:UpdateWeaponDropDown();
 
 	local resetPage = false;
-	if previousCategory ~= category_id then
+	if previousCategory ~= category_id or self.needs_reload then
 		resetPage = true;
 	end
 	if resetPage then
 		self:ResetPage();
+		self.needs_reload = nil
 	end
 end
 
@@ -272,7 +278,7 @@ end
 function CA_ItemsCollectionMixin:UpdateProgressBar()
 	local collected, total;
 	collected = app.GetCategoryCollectedCount(self.active_category_id);
-	total = app.GetCategoryTotal(self.active_category_id);
+	total = #self.visuals_list
 	self:GetParent():UpdateProgressBar(collected, total);
 end
 
@@ -303,7 +309,7 @@ function CA_ItemsCollectionMixin:UpdateItems()
 			end
 
  			--print("DEBUG UpdateItems ["..i.."] - appearance>", model.appearance_id, ">>>", appearance_id)
-			if ( appearance_id ~= model.appearance_id) then
+			if ( appearance_id ~= model.appearance_id or self.needs_reload) then
 				local item_id = app.GetItemForModel(appearance_id)
 				if ( isArmor ) then
 					sourceID = "item:"..tostring(item_id)
@@ -332,9 +338,6 @@ function CA_ItemsCollectionMixin:UpdateItems()
 			model.visualInfo = nil;
 		end
 	end
-
-	-- progress bar
-	self:UpdateProgressBar();
 end
 
 function CA_ItemsCollectionMixin:GetActiveSlot()
@@ -537,13 +540,13 @@ end
 
 
 -- ***** WEAPON DROPDOWN
-
 function CA_WardrobeCollectionFrameWeaponDropDown_OnLoad(self)
 	UIDropDownMenu_Initialize(self, CA_WardrobeCollectionFrameWeaponDropDown_Init);
 	UIDropDownMenu_SetWidth(self, 140);
 end
 
 function CA_WardrobeCollectionFrameWeaponDropDown_Init(self)
+	print("DEBUG CA_WardrobeCollectionFrameWeaponDropDown_Init")
 	--[[ local transmogLocation = WardrobeCollectionFrame.ItemsCollectionFrame.transmogLocation;
 	if ( not transmogLocation ) then
 		return;
@@ -566,7 +569,7 @@ function CA_WardrobeCollectionFrameWeaponDropDown_Init(self)
 
 	--local isForMainHand = transmogLocation:IsMainHand();
 	--local isForOffHand = transmogLocation:IsOffHand();
-	local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories()
+	local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories(app.non_filtered)
 	local weapon_categories
 	local active_slot = WardrobeCollectionFrame.ItemsCollectionFrame.active_slot
 	if active_slot == "MAINHANDSLOT" then
@@ -599,5 +602,59 @@ function CA_WardrobeCollectionFrameWeaponDropDown_OnClick(self, category)
 	if ( category and WardrobeCollectionFrame.ItemsCollectionFrame.active_category_id ~= category ) then
 		CloseDropDownMenus();
 		WardrobeCollectionFrame.ItemsCollectionFrame:SetActiveCategory(category);
+	end
+end
+
+
+-- ***** FILTER DROPDOWN
+function CA_ItemFilterDropDown_OnLoad(self)
+	UIDropDownMenu_Initialize(self, CA_ItemFilterDropDown_Init);
+	UIDropDownMenu_SetWidth(self, 74);
+end
+
+function CA_ItemFilterDropDown_Init(self)
+	local _, class, class_id = UnitClass("player")
+	local _, _, _, class_color = GetClassColor(class)
+	local class_name = WrapTextInColorCode(GetClassInfo(class_id), class_color)
+
+	local dropdown = WardrobeCollectionFrameClassDropDown
+	if app.non_filtered then
+		UIDropDownMenu_SetText(dropdown, ALL_CLASSES);
+	else
+		UIDropDownMenu_SetText(dropdown, class_name);
+	end
+
+
+	local info = UIDropDownMenu_CreateInfo();
+	info.func = CA_ItemFilterDropDown_OnClick;
+
+	info.text = ALL_CLASSES
+	info.checked = app.non_filtered
+	info.arg1 = 1
+	UIDropDownMenu_AddButton(info);
+
+	info.text = class_name
+	info.checked = not app.non_filtered
+	info.arg1 = 2
+	UIDropDownMenu_AddButton(info);
+
+	return 2;
+end
+
+function CA_ItemFilterDropDown_OnClick(self, arg1, arg2, checked)
+	if not checked then
+		if arg1 == 1 then
+			print("DEBUG non_filtered >>> true")
+			app.non_filtered = true
+		elseif arg1 == 2 then
+			print("DEBUG non_filtered >>> false")
+			app.non_filtered = false
+		end
+		local dropdown = WardrobeCollectionFrameClassDropDown
+		UIDropDownMenu_SetText(dropdown, self.value)
+
+		local frame = WardrobeCollectionFrame.ItemsCollectionFrame
+		frame.needs_reload = true
+		frame:SetActiveSlot(frame.active_slot)
 	end
 end

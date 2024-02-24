@@ -1,5 +1,6 @@
 local app_name, app = ...
 
+app.non_filtered = true
 
 function app.GetCategoryInfo(category_id)
     local category_info = app.DB.CATEGORIES[category_id]
@@ -29,8 +30,13 @@ function app.GetCategoryID(category)
     end
 end
 
-function app.GetPossibleWeaponCategories()
+function app.GetPossibleWeaponCategories(non_filtered)
+    print("DEBUG: app.non_filtered", app.non_filtered)
     local _, _, class_id = UnitClass("player")
+    if non_filtered == true then
+        class_id = 0
+    end
+    print("DEBUG GetPossibleWeaponCategories for", class_id )
     local _, possible_mainhand, possible_secondaryhand = unpack(app.DB.CLASS_PROFICIENCY[class_id])
     return possible_mainhand, possible_secondaryhand
 end
@@ -117,23 +123,31 @@ local function merge_tables(t1, t2)
 end
 function app.GetVisualsList(category_id)
 	local _, _, class_id = UnitClass("player")
-	local armor_type = unpack(app.DB.CLASS_PROFICIENCY[class_id])
+    if app.non_filtered then
+        class_id = 0
+    end
+	local armor_types = unpack(app.DB.CLASS_PROFICIENCY[class_id])
+    local visuals_list = {}
 
-    -- For Cloaks, Shirts and Tabards return universal appearances list
-    if category_id == 3 or category_id == 6 or category_id == 7 then
+    -- For Cloaks, Shirts, Tabards and Weapons return universal appearances list
+    if category_id == 3 or category_id == 6 or category_id == 7 or category_id >= 13 then
         return get_keys(app.DB.APPEARANCES[category_id])
-    -- For Chest add also Robe appearances (NEEDS REWORK - handle unfiltered)
-    elseif category_id == 4 then
-        local chest_appearances = get_keys(app.DB.APPEARANCES[4][armor_type])
-        local robe_appearances = get_keys(app.DB.APPEARANCES[5][armor_type])
-        return merge_tables(chest_appearances, robe_appearances)
-    -- For other armor return type specific appearances list (NEEDS REWORK - handle unfiltered)
-	elseif category_id <= 12 then
-		return get_keys(app.DB.APPEARANCES[category_id][armor_type])
-    -- For weapons return universal list if possible to equip  (NEEDS REWORK - handle unfiltered)
-	else
-		return get_keys(app.DB.APPEARANCES[category_id])
-	end
+    end
+    for i=1, #armor_types do
+        local armor_type = armor_types[i]
+
+        -- For Chest add Robe appearances
+        if category_id == 4 then
+            local chest_appearances = get_keys(app.DB.APPEARANCES[4][armor_type])
+            local robe_appearances = get_keys(app.DB.APPEARANCES[5][armor_type])
+            local combined_chests = merge_tables(chest_appearances, robe_appearances)
+            visuals_list = merge_tables(visuals_list, combined_chests)
+        -- For other armor return type specific appearances list (NEEDS REWORK - handle unfiltered)
+        else
+            visuals_list = merge_tables(visuals_list, get_keys(app.DB.APPEARANCES[category_id][armor_type]))
+        end
+    end
+    return visuals_list
 end
 
 
@@ -165,11 +179,6 @@ end
 -- TODO
 function app.GetCategoryCollectedCount(category)
     return 0
-end
-
-
-function app.GetCategoryTotal(category_id)
-    return #app.GetVisualsList(category_id)
 end
 
 

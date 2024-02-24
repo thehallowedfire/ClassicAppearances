@@ -607,6 +607,54 @@
 					<OnLoad function="WardrobeFilterDropDown_OnLoad"/>
 				</Scripts>
 			</Frame> -->
+			<Frame name="$parentClassDropDown" inherits="UIDropDownMenuTemplate" enableMouse="true" parentKey="classDropDown">
+				<Size x="93" y="22"/>
+				<Anchors>
+					<Anchor point="LEFT" relativeKey="$parent.SearchBox" relativePoint="RIGHT" x="-12" y="-1"/>
+				</Anchors>
+				<Scripts>
+					<OnLoad function="CA_ItemFilterDropDown_OnLoad"/>
+				</Scripts>
+			</Frame>
+			<!-- <Button parentKey="RefreshButton">
+				<Size x="32" y="32"/>
+				<Anchors>
+					<Anchor point="TOPRIGHT" relativeTo="$parent" relativePoint="TOPRIGHT" x="-8" y="-25"/>
+				</Anchors>
+				<Layers>
+					<Layer level="ARTWORK" textureSubLevel="5">
+						<Texture parentKey="Icon" file="Interface\Buttons\UI-RefreshButton">
+							<Size x="16" y="16"/>
+							<Anchors>
+								<Anchor point="CENTER" x="-1" y="0"/>
+							</Anchors>
+						</Texture>
+					</Layer>
+				</Layers>
+				<NormalTexture file="Interface\Buttons\UI-SquareButton-Up"/>
+				<PushedTexture file="Interface\Buttons\UI-SquareButton-Down"/>
+				<DisabledTexture file="Interface\Buttons\UI-SquareButton-Disabled"/>
+				<HighlightTexture file="Interface\Buttons\UI-Common-MouseHilight" alphaMode="ADD"/>
+				<Scripts>
+					<OnMouseDown>
+						self.Icon:SetPoint("CENTER", self, "CENTER", -2, -1);
+					</OnMouseDown>
+					<OnMouseUp>
+						self.Icon:SetPoint("CENTER", self, "CENTER", -1, 0);
+					</OnMouseUp>
+					<OnEnter>
+						GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
+						GameTooltip:SetText(LFG_LIST_REFRESH, HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b);
+					</OnEnter>
+					<OnLeave function="GameTooltip_Hide"/>
+					<OnClick>
+						PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON);
+						print("DEBUG Clicked Refresh button")
+					</OnClick>
+				</Scripts>
+			</Button> -->
+
+
 
 			<Frame parentKey="ItemsCollectionFrame" parentArray="ContentFrames" mixin="CA_ItemsCollectionMixin" inherits="CollectionsBackgroundTemplate">
 				<KeyValues>
