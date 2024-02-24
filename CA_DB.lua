@@ -2,55 +2,71 @@ local app_name, app = ...
 
 app.DB = {}
 
+app.DB.SLOTS = {
+    [1] = "HEADSLOT",
+    [2] = "SHOULDERSLOT",
+    [3] = "BACKSLOT",
+    [4] = "CHESTSLOT",
+    [6] = "SHIRTSLOT",
+    [7] = "TABARDSLOT",
+    [8] = "WRISTSLOT",
+    [9] = "HANDSSLOT",
+    [10] = "WAISTSLOT",
+    [11] = "LEGSSLOT",
+    [12] = "FEETSLOT",
+    [13] = "MAINHANDSLOT",
+    [14] = "SECONDARYHANDSLOT",
+}
 app.DB.CATEGORIES = {
+    -- name, isWeapon, canMainHand, canOffHand
     -- Armor
-    [1] = {}, -- Head
-    [2] = {}, -- Shoulder
-    [3] = {}, -- Cloak
-    [4] = {}, -- Chest
-    [5] = {}, -- Robe
-    [6] = {}, -- Shirt
-    [7] = {}, -- Tabard
-    [8] = {}, -- Wrist
-    [9] = {}, -- Hands
-    [10] = {}, -- Waist
-    [11] = {}, -- Legs
-    [12] = {}, -- Feet
+    [1] = {HEADSLOT, false, false, false}, -- Head
+    [2] = {SHOULDERSLOT, false, false, false}, -- Shoulder
+    [3] = {BACKSLOT, false, false, false}, -- Cloak
+    [4] = {CHESTSLOT, false, false, false}, -- Chest
+    [5] = {CHESTSLOT, false, false, false}, -- Robe
+    [6] = {SHIRTSLOT, false, false, false}, -- Shirt
+    [7] = {TABARDSLOT, false, false, false}, -- Tabard
+    [8] = {WRISTSLOT, false, false, false}, -- Wrist
+    [9] = {HANDSSLOT, false, false, false}, -- Hands
+    [10] = {WAISTSLOT, false, false, false}, -- Waist
+    [11] = {LEGSSLOT, false, false, false}, -- Legs
+    [12] = {FEETSLOT, false, false, false}, -- Feet
 
     -- Weapons
-    [13] = {}, -- 1H Axes
-    [14] = {}, -- 2H Axes
-    [15] = {}, -- Bows
-    [16] = {}, -- Guns
-    [17] = {}, -- 1H Maces
-    [18] = {}, -- 2H Maces
-    [19] = {}, -- Polearms
-    [20] = {}, -- 1H Swords
-    [21] = {}, -- 2H Swords
-    [22] = {}, -- Staves
-    [23] = {}, -- Fist Weapons
-    [24] = {}, -- Daggers
-    [25] = {}, -- Thrown TODO
-    [26] = {}, -- Crossbows
-    [27] = {}, -- Wands
-    [28] = {}, -- Fishing Poles TODO
+    [13] = {196, true, true, false}, -- 1H Axes
+    [14] = {197, true, true, false}, -- 2H Axes
+    [15] = {264, true, true, false}, -- Bows
+    [16] = {266, true, true, false}, -- Guns
+    [17] = {198, true, true, false}, -- 1H Maces
+    [18] = {199, true, true, false}, -- 2H Maces
+    [19] = {200, true, true, false}, -- Polearms
+    [20] = {201, true, true, false}, -- 1H Swords
+    [21] = {202, true, true, false}, -- 2H Swords
+    [22] = {227, true, true, false}, -- Staves
+    [23] = {15590, true, true, false}, -- Fist Weapons
+    [24] = {1180, true, true, false}, -- Daggers
+    [25] = {2567, true, true, false}, -- Thrown TODO
+    [26] = {5011, true, true, false}, -- Crossbows
+    [27] = {5009, true, true, false}, -- Wands
+    [28] = {"Fishing Poles", true, true, false}, -- Fishing Poles TODO
 
     -- Secondary
-    [29] = {}, -- Shields (in fact they are Armor)
-    [30] = {}, -- Off-Hands (in fact they are Armor)
+    [29] = {SHOW_COMBAT_HEALING_ABSORB_SELF, true, false, true}, -- Shields (in fact they are Armor)
+    [30] = {INVTYPE_HOLDABLE, true, false, true}, -- Off-Hands (in fact they are Armor)
 }
 app.DB.CLASS_PROFICIENCY = {
-	[0] = {4, {13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30}}, -- Unfiltered
-	[1] = {4, {13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28, 29, 30}}, -- Warrior
-	[2] = {4, {13, 14, 17, 18, 19, 20, 21, 28, 29, 30}}, -- Paladin
-	[3] = {3, {13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 26, 28, 29, 30}}, -- Hunter
-	[4] = {2, {13, 15, 16, 17, 20, 23, 24, 25, 26, 28, 29, 30}}, -- Rogue
-	[5] = {1, {17, 22, 24, 25, 27, 28, 29, 30}}, -- Priest
-	[6] = {4, {13, 14, 17, 18, 19, 20, 21, 25, 28, 29, 30}}, -- Death Knight
-	[7] = {3, {13, 14, 17, 18, 22, 23, 24, 25, 28, 29, 30}}, -- Shaman
-	[8] = {1, {20, 22, 24, 25, 27, 28, 29, 30}}, -- Mage
-	[9] = {1, {20, 22, 24, 25, 27, 28, 29, 30}}, -- Warlock
-	[11] = {2, {17, 18, 19, 22, 23, 24, 25, 28, 29, 30}}, -- Druid
+	[0] = {4, {13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28}, {29, 30}}, -- Unfiltered
+	[1] = {4, {13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28}, {29, 30}}, -- Warrior
+	[2] = {4, {13, 14, 17, 18, 19, 20, 21, 28}, {29, 30}}, -- Paladin
+	[3] = {3, {13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 26, 28}, {30}}, -- Hunter
+	[4] = {2, {13, 15, 16, 17, 20, 23, 24, 25, 26, 28}, {30}}, -- Rogue
+	[5] = {1, {17, 22, 24, 25, 27, 28}, {30}}, -- Priest
+	[6] = {4, {13, 14, 17, 18, 19, 20, 21, 25, 28}, {30}}, -- Death Knight
+	[7] = {3, {13, 14, 17, 18, 22, 23, 24, 25, 28}, {29, 30}}, -- Shaman
+	[8] = {1, {20, 22, 24, 25, 27, 28}, {30}}, -- Mage
+	[9] = {1, {20, 22, 24, 25, 27, 28}, {30}}, -- Warlock
+	[11] = {2, {17, 18, 19, 22, 23, 24, 25, 28}, {30}}, -- Druid
 }
 app.DB.EXPANSIONS = {
     [0] = "Vanilla",

@@ -11,31 +11,14 @@ if not IsAddOnLoaded("Blizzard_Collections") then
     end)
 end
 
-function A_TEST()
-    TEST = CreateFrame("DressUpModel", nil, UIParent, "WardrobeItemsModelTemplate")
-    TEST:SetPoint("CENTER")
-    TEST:SetAutoDress(false);
-    local lightValues = { omnidirectional = false, point = CreateVector3D(-1, 1, -1), ambientIntensity = 1.05, ambientColor = CreateColor(1, 1, 1), diffuseIntensity = 0, diffuseColor = CreateColor(1, 1, 1) };
-    local enabled = true;
-    TEST:SetLight(enabled, lightValues);
-    TEST.desaturated = false;
-    TEST:SetUnit("player")
-    --TEST:SetShown(true)
-    --A_Model_ApplyUICamera(TEST, 236)
-    TEST.cameraID = 236 -- Head
-
+-- Hack to get names for weapon categories
+for i, info in pairs(app.DB.CATEGORIES) do
+    if type(info[1]) ~= "string" then
+        local id = info[1]
+        local spell = Spell:CreateFromSpellID(id)
+        spell:ContinueOnSpellLoad(function()
+            local name = spell:GetSpellName()
+            app.DB.CATEGORIES[i][1] = name
+        end)
+    end
 end
-
-function B_TEST(appearance_id)
-    return app.GetAppearanceCameraID(appearance_id)
-end
-
-
---[[ local function OnEvent(self, event, unit)
-	m:SetUnit(unit)
-	m:TryOn(7545)
-end
-
-local f = CreateFrame("Frame")
-f:RegisterUnitEvent("UNIT_MODEL_CHANGED", "player")
-f:SetScript("OnEvent", OnEvent) ]]

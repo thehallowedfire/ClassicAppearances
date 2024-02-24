@@ -629,15 +629,15 @@
 						</Anchors>
 					</Frame>
 					<!-- <Frame name="WardrobeModelRightClickDropDown" parentKey="RightClickDropDown" inherits="UIDropDownMenuTemplate" hidden="true"/> -->
-					<!-- <Frame parentKey="WeaponDropDown" name="$parentWeaponDropDown" inherits="UIDropDownMenuTemplate" enableMouse="true" hidden="true">
+					<Frame parentKey="WeaponDropDown" name="$parentWeaponDropDown" inherits="UIDropDownMenuTemplate" enableMouse="true" hidden="true">
 						<Size x="87" y="22"/>
 						<Anchors>
 							<Anchor point="TOPRIGHT" x="-6" y="-22"/>
 						</Anchors>
 						<Scripts>
-							<OnLoad function="WardrobeCollectionFrameWeaponDropDown_OnLoad"/>
+							<OnLoad function="CA_WardrobeCollectionFrameWeaponDropDown_OnLoad"/>
 						</Scripts>
-					</Frame> -->
+					</Frame>
 					<Frame parentKey="SlotsFrame">
 						<Size x="10" y="10"/>
 						<Anchors>

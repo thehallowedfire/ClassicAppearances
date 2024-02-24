@@ -87,7 +87,7 @@ function CA_WardrobeCollectionFrameMixin:OnHide()
 end
 
 function CA_WardrobeCollectionFrameMixin:OnKeyDown(key)
-	print("CA_WardrobeCollectionFrameMixin:OnKeyDown", KEY)
+	print("CA_WardrobeCollectionFrameMixin:OnKeyDown", key)
 	--[[ if self.tooltipCycle and key == WARDROBE_CYCLE_KEY then
 		self:SetPropagateKeyboardInput(false);
 		if IsShiftKeyDown() then
@@ -129,9 +129,12 @@ function CA_ItemsCollectionMixin:OnLoad()
 	self.NUM_COLS = 6;
 	self.PAGE_SIZE = self.NUM_ROWS * self.NUM_COLS;
 
-	-- UIDropDownMenu_Initialize(self.RightClickDropDown, nil, "MENU");
-	-- self.RightClickDropDown.initialize = WardrobeCollectionFrameRightClickDropDown_Init;
-	self.defaultCategory = "HEADSLOT"
+	--UIDropDownMenu_Initialize(self.RightClickDropDown, nil, "MENU");
+	--self.RightClickDropDown.initialize = WardrobeCollectionFrameRightClickDropDown_Init;
+	self.default_category = "HEADSLOT"
+	local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories()
+	self.last_mainhand_category_id = possible_mainhand_categories[1]
+	self.last_secondaryhand_category_id = possible_secondaryhand_categories[1]
 end
 
 
@@ -142,7 +145,7 @@ local shorterSectionSpacing = 19;
 
 function CA_ItemsCollectionMixin:CreateSlotButtons()
 	local slots = { "head", "shoulder", "back", "chest", "shirt", "tabard", "wrist", defaultSectionSpacing, "hands", "waist", "legs", "feet", defaultSectionSpacing, "mainhand", spacingWithSmallButton, "secondaryhand" };
-	--local slot_ids = { 1, 2, 3, 4, 5, 6, 7, nil, 8, 9, 10, 11, nil, 12, nil, 13 }
+	--local slot_ids = { 1, 2, 3, 4, 6, 7, 8, nil, 9, 10, 11, 12, nil, 13, nil, 29 }
 	local parentFrame = self.SlotsFrame;
 	local lastButton;
 	local xOffset = spacingNoSmallButton;
@@ -184,30 +187,68 @@ function CA_ItemsCollectionMixin:CreateSlotButtons()
 end
 
 function CA_ItemsCollectionMixin:OnShow()
-	self:SetActiveCategory(self.defaultCategory)
+	self:UpdateWeaponDropDown();
+	self:SetActiveSlot(self.default_category)
 end
 
-function CA_ItemsCollectionMixin:SetActiveCategory(category)
-	local previousCategory = self.activeCategory;
-	if self.activeCategory ~= category then
-		self.activeCategory = category
-		self:RefreshVisualsList();
+function CA_ItemsCollectionMixin:UpdateWeaponDropDown()
+	local dropdown = self.WeaponDropDown;
+	local name, isWeapon = app.GetCategoryInfo(self.active_category_id);
+	if ( not isWeapon ) then
+		dropdown:Show();
+		UIDropDownMenu_DisableDropDown(dropdown);
+		UIDropDownMenu_SetText(dropdown, "");
+	else
+		dropdown:Show();
+		UIDropDownMenu_SetSelectedValue(dropdown, self.active_category_id);
+		UIDropDownMenu_SetText(dropdown, name);
+		local validCategories = CA_WardrobeCollectionFrameWeaponDropDown_Init(dropdown);
+		if ( validCategories > 1 ) then
+			UIDropDownMenu_EnableDropDown(dropdown);
+		else
+			UIDropDownMenu_DisableDropDown(dropdown);
+		end
+	end
+end
+
+function CA_ItemsCollectionMixin:SetActiveSlot(category)
+	local category_id = app.GetCategoryID(category)
+	if category_id ~= self.active_category_id then
+		self.active_slot = category
+
+		if category == "MAINHANDSLOT" then
+			category_id = self.last_mainhand_category_id
+		elseif category == "SECONDARYHANDSLOT" then
+			category_id = self.last_secondaryhand_category_id
+		end
+
+		self:SetActiveCategory(category_id)
+
+		local slotButtons = self.SlotsFrame.Buttons;
+		for i = 1, #slotButtons do
+			local button = slotButtons[i];
+			button.SelectedTexture:SetShown(button.slot == category);
+		end
+	end
+	CloseDropDownMenus();
+end
+
+function CA_ItemsCollectionMixin:SetActiveCategory(category_id)
+	local previousCategory = self.active_category_id;
+	if self.active_category_id ~= category_id then
+		self.active_category_id = category_id
+		self:RefreshVisualsList(category_id);
 		for i=1, #self.Models do
 			local model = self.Models[i]
-			model:Reload(category)
+			model:Reload(category_id)
 		end
 		-- Not needed. Items get updated when resetting page which happens when user switches category
 		--[[ self:UpdateItems(); ]]
 	end
-
-	local slotButtons = self.SlotsFrame.Buttons;
-	for i = 1, #slotButtons do
-		local button = slotButtons[i];
-		button.SelectedTexture:SetShown(button.slot == self.activeCategory);
-	end
+	self:UpdateWeaponDropDown();
 
 	local resetPage = false;
-	if previousCategory ~= category then
+	if previousCategory ~= category_id then
 		resetPage = true;
 	end
 	if resetPage then
@@ -221,8 +262,8 @@ function CA_ItemsCollectionMixin:ResetPage()
 	self:UpdateItems();
 end
 
-function CA_ItemsCollectionMixin:RefreshVisualsList()
-	self.visuals_list = app.GetVisualsList()
+function CA_ItemsCollectionMixin:RefreshVisualsList(category)
+	self.visuals_list = app.GetVisualsList(category)
 	--self:FilterVisuals();
 	--self:SortVisuals();
 	self.PagingFrame:SetMaxPages(ceil(#self.visuals_list / self.PAGE_SIZE));
@@ -230,8 +271,8 @@ end
 
 function CA_ItemsCollectionMixin:UpdateProgressBar()
 	local collected, total;
-	collected = app.GetCategoryCollectedCount(self.activeCategory);
-	total = app.GetCategoryTotal(self.activeCategory);
+	collected = app.GetCategoryCollectedCount(self.active_category_id);
+	total = app.GetCategoryTotal(self.active_category_id);
 	self:GetParent():UpdateProgressBar(collected, total);
 end
 
@@ -239,7 +280,7 @@ function CA_ItemsCollectionMixin:UpdateItems()
 	local isArmor;
 	local cameraID;
 
-	local _, is_weapon = app.GetCategoryInfo(self.activeCategory);
+	local _, is_weapon = app.GetCategoryInfo(self.active_category_id);
 	isArmor = not is_weapon;
 
 	local indexOffset = (self.PagingFrame:GetCurrentPage() - 1) * self.PAGE_SIZE;
@@ -251,7 +292,7 @@ function CA_ItemsCollectionMixin:UpdateItems()
 			model:Show();
 			-- model:Reload(self.activeCategory)
 			-- camera
-			cameraID = app.GetAppearanceCameraID(appearance_id, self.activeCategory);
+			cameraID = app.GetAppearanceCameraID(appearance_id, self.active_category_id);
 			--[[ if ( self.transmogLocation:IsAppearance() ) then
 				cameraID = CA_GetAppearanceCameraID(visualInfo.visualID);
 			end ]]
@@ -263,13 +304,13 @@ function CA_ItemsCollectionMixin:UpdateItems()
 
  			--print("DEBUG UpdateItems ["..i.."] - appearance>", model.appearance_id, ">>>", appearance_id)
 			if ( appearance_id ~= model.appearance_id) then
+				local item_id = app.GetItemForModel(appearance_id)
 				if ( isArmor ) then
-					--TEMP
-					--[[ local sourceID = self:GetAnAppearanceSourceFromVisual(visualInfo.visualID, nil); ]]
-					sourceID = "item:"..tostring(app.GetItemForModel(appearance_id))
+					sourceID = "item:"..tostring(item_id)
 					model:TryOn(sourceID);
 				else
-					model:SetItemAppearance(appearance_id);
+					--model:SetItemAppearance(appearance_id);
+					model:SetItem(item_id)
 				end
 			end
 			model.appearance_id = appearance_id;
@@ -297,7 +338,7 @@ function CA_ItemsCollectionMixin:UpdateItems()
 end
 
 function CA_ItemsCollectionMixin:GetActiveSlot()
-	return self.activeCategory
+	return self.active_category_id
 	--[[ return self.transmogLocation and self.transmogLocation:GetSlotName(); ]]
 end
 
@@ -311,7 +352,7 @@ function CA_ItemsCollectionMixin:OnHide()
 end
 
 function CA_ItemsCollectionMixin:OnPageChanged(userAction)
-	PlaySound(SOUNDKIT.UI_TRANSMOG_PAGE_TURN);
+	PlaySound(SOUNDKIT.IG_ABILITY_PAGE_TURN);
 	CloseDropDownMenus();
 	if ( userAction ) then
 		self:UpdateItems();
@@ -345,12 +386,12 @@ function CA_ItemsModelMixin:OnModelLoaded()
 	self.desaturated = false;
 end
 
-function CA_ItemsModelMixin:Reload(category)
-	local _, is_weapon = app.GetCategoryInfo(category);
+function CA_ItemsModelMixin:Reload(category_id)
+	local _, is_weapon = app.GetCategoryInfo(category_id);
 	if not is_weapon then
 		self:SetUnit("player", false);
-		self:Undress()
 	end
+	self:Undress()
 	self:SetDoBlend(false);
 	self:SetKeepModelOnHide(true);
 	if ( self.cameraID ) then
@@ -480,8 +521,10 @@ end
 CA_SlotButtonMixin = { }
 
 function CA_SlotButtonMixin:OnClick()
-	PlaySound(SOUNDKIT.UI_TRANSMOG_GEAR_SLOT_CLICK);
-	self:GetParent():GetParent():SetActiveCategory(self.slot)
+	PlaySound(902);
+	if self.slot ~= self:GetParent():GetParent().active_slot then
+		self:GetParent():GetParent():SetActiveSlot(self.slot)
+	end
 end
 
 function CA_SlotButtonMixin:OnEnter()
@@ -492,122 +535,68 @@ end
 
 
 
+-- ***** WEAPON DROPDOWN
 
-
-
-
--- OLD
-function CA_ItemsCollectionMixin:SetActiveCategory_OLD(category)
-	local previousCategory = self.activeCategory;
-	self.activeCategory = category;
-
-	if previousCategory ~= category then
-		self:RefreshVisualsList();
-	else
-		self:RefreshVisualsList();
-		self:UpdateItems();
-	end
-
-	local slotButtons = self.SlotsFrame.Buttons;
-	for i = 1, #slotButtons do
-		local button = slotButtons[i];
-		button.SelectedTexture:SetShown(button.slot == self.activeCategory);
-	end
-
-	local resetPage = false;
-	if previousCategory ~= category then
-		resetPage = true;
-	end
-	if resetPage then
-		self:ResetPage();
-	end
+function CA_WardrobeCollectionFrameWeaponDropDown_OnLoad(self)
+	UIDropDownMenu_Initialize(self, CA_WardrobeCollectionFrameWeaponDropDown_Init);
+	UIDropDownMenu_SetWidth(self, 140);
 end
--- OLD
-function CA_ItemsCollectionMixin:UpdateItems_OLD()
-	print("DEBUG UpdateItems")
 
-	local is_armor;
-	local _, is_weapon = app.GetCategoryInfo(self.activeCategory);
-	is_armor = not is_weapon;
+function CA_WardrobeCollectionFrameWeaponDropDown_Init(self)
+	--[[ local transmogLocation = WardrobeCollectionFrame.ItemsCollectionFrame.transmogLocation;
+	if ( not transmogLocation ) then
+		return;
+	end ]]
 
-	local indexOffset = (self.PagingFrame:GetCurrentPage() - 1) * self.PAGE_SIZE;
-	for i = 1, self.PAGE_SIZE do
-		local model = self.Models[i];
-		local index = i + indexOffset;
-		local appearance_id = self.visuals_list[index];
-		local cameraID;
+	local selectedValue = UIDropDownMenu_GetSelectedValue(self);
+	local info = UIDropDownMenu_CreateInfo();
+	info.func = CA_WardrobeCollectionFrameWeaponDropDown_OnClick;
 
-		model:Reload2(self.activeCategory)
+	--[[ local equippedItemID = GetInventoryItemID("player", transmogLocation:GetSlotID());
+	local checkCategory = equippedItemID and C_Transmog.IsAtTransmogNPC();
+	if ( checkCategory ) then
+		-- if the equipped item cannot be transmogrified, relax restrictions
+		local isTransmogrified, hasPending, isPendingCollected, canTransmogrify, cannotTransmogrifyReason, hasUndo = C_Transmog.GetSlotInfo(transmogLocation);
+		if ( not canTransmogrify and not hasUndo ) then
+			checkCategory = false;
+		end
+	end ]]
+	local buttonsAdded = 0;
 
-		if ( appearance_id ) then
-			model:Show();
-			-- camera
-			cameraID = app.GetAppearanceCameraID(appearance_id);
-			--[[ if ( self.transmogLocation:IsAppearance() ) then
-				cameraID = CA_GetAppearanceCameraID(visualInfo.visualID);
-			end ]]
-			if ( model.cameraID ~= cameraID ) then
-				print("DEBUG UpdateItems ["..i.."] - new cameraID:", model.cameraID, ">>>", cameraID)
-				app.Model_ApplyUICamera(model, cameraID);
-				model.cameraID = cameraID;
-			end
+	--local isForMainHand = transmogLocation:IsMainHand();
+	--local isForOffHand = transmogLocation:IsOffHand();
+	local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories()
+	local weapon_categories
+	local active_slot = WardrobeCollectionFrame.ItemsCollectionFrame.active_slot
+	if active_slot == "MAINHANDSLOT" then
+		weapon_categories = possible_mainhand_categories
+	elseif active_slot == "SECONDARYHANDSLOT" then
+		weapon_categories = possible_secondaryhand_categories
+	end
 
- 			print("DEBUG UpdateItems ["..i.."] - appearance>", model.appearance_id, ">>>", appearance_id)
-			if ( appearance_id ~= model.appearance_id) then
-				if ( is_armor ) then
-					--TEMP
-					--[[ local sourceID = self:GetAnAppearanceSourceFromVisual(visualInfo.visualID, nil); ]]
-					sourceID = "item:51158"
-					model:TryOn(sourceID);
-				else
-					model:SetItemAppearance(appearance_id);
-				end
-			end
-			model.appearance_id = appearance_id;
+	if weapon_categories then
+		for i=1, #weapon_categories do
+			local category_id = weapon_categories[i]
+			local name = app.GetCategoryInfo(category_id);
 
-			-- border
-			--[[ if ( not visualInfo.isCollected ) then
-				model.Border:SetAtlas("transmog-wardrobe-border-uncollected");
-			elseif ( not visualInfo.isUsable ) then
-				model.Border:SetAtlas("transmog-wardrobe-border-unusable");
+			info.text = name;
+			info.arg1 = category_id;
+			info.value = category_id;
+			if ( info.value == selectedValue ) then
+				info.checked = 1;
 			else
-				model.Border:SetAtlas("transmog-wardrobe-border-collected");
-			end ]]
-
-			if ( GameTooltip:GetOwner() == model ) then
-				model:OnEnter();
+				info.checked = nil;
 			end
-		else
-			model:Hide();
-			model.visualInfo = nil;
+			UIDropDownMenu_AddButton(info);
+			buttonsAdded = buttonsAdded + 1;
 		end
 	end
-
-	-- progress bar
-	--[[ self:UpdateProgressBar(); ]]
+	return buttonsAdded;
 end
 
--- OLD
-function CA_ItemsModelMixin:Reload_OLD(reloadSlot)
-	print("DEBUG reload")
-	if ( self:IsShown() ) then
-		if ( WARDROBE_MODEL_SETUP[reloadSlot] ) then
-			--[[ local useTransmogSkin = GetUseTransmogSkin(reloadSlot);
-			self:SetUseTransmogSkin(useTransmogSkin);
-			self:SetUseTransmogChoices(WARDROBE_MODEL_SETUP[reloadSlot].useTransmogChoices);
-			self:SetObeyHideInTransmogFlag(WARDROBE_MODEL_SETUP[reloadSlot].obeyHideInTransmogFlag); ]]
-			self:SetUnit("player", false);
-			self:SetDoBlend(false);
-			for slot, equip in pairs(WARDROBE_MODEL_SETUP[reloadSlot].slots) do
-				if ( equip ) then
-					self:TryOn(WARDROBE_MODEL_SETUP_GEAR[slot]);
-				end
-			end
-		end
-		self:SetKeepModelOnHide(true);
-		self.cameraID = nil;
-		self.needsReload = nil;
-	else
-		self.needsReload = true;
+function CA_WardrobeCollectionFrameWeaponDropDown_OnClick(self, category)
+	if ( category and WardrobeCollectionFrame.ItemsCollectionFrame.active_category_id ~= category ) then
+		CloseDropDownMenus();
+		WardrobeCollectionFrame.ItemsCollectionFrame:SetActiveCategory(category);
 	end
 end

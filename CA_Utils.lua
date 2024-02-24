@@ -1,30 +1,8 @@
 local app_name, app = ...
 
-local CATEGORY_IDS = {
-	["HEADSLOT"] = {1, false},
-	["SHOULDERSLOT"] = {2, false},
-	["BACKSLOT"] = {3, false},
-	["CHESTSLOT"] = {4, false},
-	["SHIRTSLOT"] = {6, false},
-	["TABARDSLOT"] = {7, false},
-	["WRISTSLOT"] = {8, false},
-	["HANDSSLOT"] = {9, false},
-	["WAISTSLOT"] = {10, false},
-	["LEGSSLOT"] = {11, false},
-	["FEETSLOT"] = {12, false},
-	["MAINHANDSLOT"] = {13, true},
-	["SECONDARYHANDSLOT"] = {14, true},
-}
-function app.GetActiveCategoryID(category)
-    if not category then
-        category = WardrobeCollectionFrame.ItemsCollectionFrame.activeCategory
-    end
-	local category_id = unpack(CATEGORY_IDS[category])
-	return category_id, WardrobeCollectionFrame.ItemsCollectionFrame.subcategory_id
-end
 
-function app.GetCategoryInfo(category)
-    local category_info = CATEGORY_IDS[category]
+function app.GetCategoryInfo(category_id)
+    local category_info = app.DB.CATEGORIES[category_id]
     if category_info then
         return unpack(category_info)
     else
@@ -32,20 +10,33 @@ function app.GetCategoryInfo(category)
     end
 end
 
-local UNIT_RACE_CONVERSION = {
-    [1] = 1, -- Human
-    [3] = 2, -- Dwarf
-    [4] = 3, -- Night Elf
-    [7] = 4, -- Gnome
-    [11] = 5, -- Draenei
-    [2] = 6, -- Orc
-    [5] = 7, -- Undead
-    [6] = 8, -- Tauren
-    [8] = 9, -- Troll
-    [10] = 10 -- Blood Elf
-}
-function app.GetAppearanceCameraID(appearance_id, category)
-    local category_id, is_weapon = unpack(CATEGORY_IDS[category])
+
+function app.GetSlotForCategory(category_id)
+    if 13 <= category_id and category_id <= 28 then
+        return "MAINHANDSLOT"
+    elseif category_id == 29 or category_id == 30 then
+        return "SECONDARYHANDSLOT"
+    else
+        return app.DB.SLOTS[category_id]
+    end
+end
+
+function app.GetCategoryID(category)
+    for index, slot in pairs(app.DB.SLOTS) do
+        if slot == category then
+            return index
+        end
+    end
+end
+
+function app.GetPossibleWeaponCategories()
+    local _, _, class_id = UnitClass("player")
+    local _, possible_mainhand, possible_secondaryhand = unpack(app.DB.CLASS_PROFICIENCY[class_id])
+    return possible_mainhand, possible_secondaryhand
+end
+
+
+function app.GetAppearanceCameraID(appearance_id, category_id)
     local camera_set -- NEEDS REWORK: various types of weapons
 
     -- If Weapons then return universal camera ID
@@ -70,6 +61,7 @@ function app.GetAppearanceCameraID(appearance_id, category)
 
     return camera_set[race_id][sex - 1]
 end
+
 
 function app.Model_ApplyUICamera(self, uiCameraID)
     local cameraInfo = app.DB.CAMERA.PARAMETERS[uiCameraID]
@@ -101,6 +93,7 @@ function app.Model_ApplyUICamera(self, uiCameraID)
 	end
 end
 
+
 local function get_keys(t)
 	local keys = {}
 	for key, _ in pairs(t) do
@@ -122,10 +115,9 @@ local function merge_tables(t1, t2)
     end
     return t1
 end
-function app.GetVisualsList(category)
-	local category_id = app.GetActiveCategoryID(category)
+function app.GetVisualsList(category_id)
 	local _, _, class_id = UnitClass("player")
-	local armor_type, possible_weapon_ids = unpack(app.DB.CLASS_PROFICIENCY[class_id])
+	local armor_type = unpack(app.DB.CLASS_PROFICIENCY[class_id])
 
     -- For Cloaks, Shirts and Tabards return universal appearances list
     if category_id == 3 or category_id == 6 or category_id == 7 then
@@ -139,10 +131,11 @@ function app.GetVisualsList(category)
 	elseif category_id <= 12 then
 		return get_keys(app.DB.APPEARANCES[category_id][armor_type])
     -- For weapons return universal list if possible to equip  (NEEDS REWORK - handle unfiltered)
-	elseif is_in_array(category_id, possible_weapon_ids) then
+	else
 		return get_keys(app.DB.APPEARANCES[category_id])
 	end
 end
+
 
 function app.GetItemForModel(appearance_id)
     local item_ids = app.DB.ITEM_IDS[appearance_id]
@@ -159,6 +152,7 @@ function app.GetItemForModel(appearance_id)
     end
 end
 
+
 function app.GetAllItemIDsForModel(model)
     local item_ids = app.DB.ITEM_IDS[model.appearance_id]
     if not item_ids then
@@ -167,14 +161,17 @@ function app.GetAllItemIDsForModel(model)
     return item_ids
 end
 
+
 -- TODO
 function app.GetCategoryCollectedCount(category)
     return 0
 end
 
-function app.GetCategoryTotal(category)
-    return #app.GetVisualsList(category)
+
+function app.GetCategoryTotal(category_id)
+    return #app.GetVisualsList(category_id)
 end
+
 
 function app.GetItemExpansionAndAppearanceID(item_id)
     local item_info = app.DB.ITEM_EXPANSIONS_AND_APPEARANCES[item_id]
