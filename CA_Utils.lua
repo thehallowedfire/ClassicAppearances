@@ -1,7 +1,5 @@
 local app_name, app = ...
 
-app.non_filtered = true
-
 function app.GetCategoryInfo(category_id)
     local category_info = app.DB.CATEGORIES[category_id]
     if category_info then
@@ -10,7 +8,6 @@ function app.GetCategoryInfo(category_id)
         return
     end
 end
-
 
 function app.GetSlotForCategory(category_id)
     if 13 <= category_id and category_id <= 28 then
@@ -31,16 +28,13 @@ function app.GetCategoryID(category)
 end
 
 function app.GetPossibleWeaponCategories(non_filtered)
-    print("DEBUG: app.non_filtered", app.non_filtered)
     local _, _, class_id = UnitClass("player")
     if non_filtered == true then
         class_id = 0
     end
-    print("DEBUG GetPossibleWeaponCategories for", class_id )
     local _, possible_mainhand, possible_secondaryhand = unpack(app.DB.CLASS_PROFICIENCY[class_id])
     return possible_mainhand, possible_secondaryhand
 end
-
 
 function app.GetAppearanceCameraID(appearance_id, category_id)
     local camera_set -- NEEDS REWORK: various types of weapons

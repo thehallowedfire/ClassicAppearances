@@ -1988,7 +1988,7 @@
 							<Anchor point="BOTTOM" x="-26" y="45"/>
 						</Anchors>
 					</Button>
-					<Button parentKey="MainHandEnchantButton" parentArray="SlotButtons" inherits="WardrobeTransmogEnchantButtonTemplate">
+					<!-- <Button parentKey="MainHandEnchantButton" parentArray="SlotButtons" inherits="WardrobeTransmogEnchantButtonTemplate">
 						<KeyValues>
 							<KeyValue key="slot" value="MAINHANDSLOT" type="string"/>
 						</KeyValues>
@@ -2003,8 +2003,8 @@
 						<Anchors>
 							<Anchor point="CENTER" x="27" y="-203"/>
 						</Anchors>
-					</Button>
-					<Frame parentKey="MoneyFrame" name="WardrobeTransmogMoneyFrame" inherits="SmallMoneyFrameTemplate">
+					</Button> -->
+					<!-- <Frame parentKey="MoneyFrame" name="WardrobeTransmogMoneyFrame" inherits="SmallMoneyFrameTemplate">
 						<Anchors>
 							<Anchor point="RIGHT" relativeKey="$parent.MoneyRight" x="6" y="0"/>
 						</Anchors>
@@ -2014,8 +2014,8 @@
 								MoneyFrame_SetType(self, "STATIC");
 							</OnLoad>
 						</Scripts>
-					</Frame>
-					<Button parentKey="ApplyButton" inherits="UIPanelButtonTemplate" text="APPLY">
+					</Frame> -->
+					<!-- <Button parentKey="ApplyButton" inherits="UIPanelButtonTemplate" text="APPLY">
 						<Size x="112" y="22"/>
 						<Anchors>
 							<Anchor point="BOTTOMRIGHT" x="0" y="-22"/>
@@ -2025,13 +2025,13 @@
 								self:GetParent():ApplyPending(0);
 							</OnClick>
 						</Scripts>
-					</Button>
-					<Frame name="$parentSpecDropDown" parentKey="SpecDropDown" inherits="UIDropDownMenuTemplate">
+					</Button> -->
+					<!-- <Frame name="$parentSpecDropDown" parentKey="SpecDropDown" inherits="UIDropDownMenuTemplate">
 						<Scripts>
 							<OnLoad function="WardrobeTransmogFrameSpecDropDown_OnLoad"/>
 						</Scripts>
-					</Frame>
-					<DropDownToggleButton parentKey="SpecButton" inherits="UIMenuButtonStretchTemplate">
+					</Frame> -->
+					<!-- <DropDownToggleButton parentKey="SpecButton" inherits="UIMenuButtonStretchTemplate">
 						<Size x="22" y="22"/>
 						<Anchors>
 							<Anchor point="RIGHT" relativeKey="$parent.ApplyButton" relativePoint="LEFT" x="1" y="0"/>
@@ -2061,7 +2061,7 @@
 								self.Icon:SetPoint("CENTER", 0, 0);
 							</OnMouseUp>
 						</Scripts>
-					</DropDownToggleButton>
+					</DropDownToggleButton> -->
 				</Frames>
 				<Scripts>
 					<OnLoad method="OnLoad"/>

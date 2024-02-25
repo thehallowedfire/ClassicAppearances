@@ -22,3 +22,5 @@ for i, info in pairs(app.DB.CATEGORIES) do
         end)
     end
 end
+
+app.non_filtered = true

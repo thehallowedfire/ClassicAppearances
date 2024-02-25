@@ -132,7 +132,7 @@ function CA_ItemsCollectionMixin:OnLoad()
 	--UIDropDownMenu_Initialize(self.RightClickDropDown, nil, "MENU");
 	--self.RightClickDropDown.initialize = WardrobeCollectionFrameRightClickDropDown_Init;
 	self.default_category = "HEADSLOT"
-	local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories()
+	local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories(app.non_filtered)
 	self.last_mainhand_category_id = possible_mainhand_categories[1]
 	self.last_secondaryhand_category_id = possible_secondaryhand_categories[1]
 end
@@ -192,7 +192,6 @@ function CA_ItemsCollectionMixin:OnShow()
 end
 
 function CA_ItemsCollectionMixin:UpdateWeaponDropDown()
-	print("DEBUG UpdateWeaponDropDown")
 	local dropdown = self.WeaponDropDown;
 	local name, isWeapon = app.GetCategoryInfo(self.active_category_id);
 	if ( not isWeapon ) then
@@ -217,6 +216,12 @@ function CA_ItemsCollectionMixin:SetActiveSlot(category)
 	if category_id ~= self.active_category_id or self.needs_reload then
 		self.active_slot = category
 
+		if self.needs_reload then
+			local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories(app.non_filtered)
+			self.last_mainhand_category_id = possible_mainhand_categories[1]
+			self.last_secondaryhand_category_id = possible_secondaryhand_categories[1]
+		end
+
 		if category == "MAINHANDSLOT" then
 			category_id = self.last_mainhand_category_id
 		elseif category == "SECONDARYHANDSLOT" then
@@ -237,6 +242,12 @@ end
 function CA_ItemsCollectionMixin:SetActiveCategory(category_id)
 	local previousCategory = self.active_category_id;
 	if self.active_category_id ~= category_id or self.needs_reload then
+		if self.active_slot == "MAINHANDSLOT" then
+			self.last_mainhand_category_id = category_id
+		elseif self.active_slot == "SECONDARYHANDSLOT" then
+			self.last_secondaryhand_category_id = category_id
+		end
+
 		self.active_category_id = category_id
 		self:RefreshVisualsList(category_id);
 		for i=1, #self.Models do
@@ -365,9 +376,6 @@ end
 function CA_ItemsCollectionMixin:OnMouseWheel(delta)
 	self.PagingFrame:OnMouseWheel(delta);
 end
-
-
-
 
 
 
@@ -546,7 +554,6 @@ function CA_WardrobeCollectionFrameWeaponDropDown_OnLoad(self)
 end
 
 function CA_WardrobeCollectionFrameWeaponDropDown_Init(self)
-	print("DEBUG CA_WardrobeCollectionFrameWeaponDropDown_Init")
 	--[[ local transmogLocation = WardrobeCollectionFrame.ItemsCollectionFrame.transmogLocation;
 	if ( not transmogLocation ) then
 		return;
@@ -644,10 +651,8 @@ end
 function CA_ItemFilterDropDown_OnClick(self, arg1, arg2, checked)
 	if not checked then
 		if arg1 == 1 then
-			print("DEBUG non_filtered >>> true")
 			app.non_filtered = true
 		elseif arg1 == 2 then
-			print("DEBUG non_filtered >>> false")
 			app.non_filtered = false
 		end
 		local dropdown = WardrobeCollectionFrameClassDropDown
@@ -658,3 +663,4 @@ function CA_ItemFilterDropDown_OnClick(self, arg1, arg2, checked)
 		frame:SetActiveSlot(frame.active_slot)
 	end
 end
+
