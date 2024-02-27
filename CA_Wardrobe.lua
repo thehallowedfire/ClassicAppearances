@@ -131,7 +131,7 @@ function CA_ItemsCollectionMixin:OnLoad()
 	--UIDropDownMenu_Initialize(self.RightClickDropDown, nil, "MENU");
 	--self.RightClickDropDown.initialize = WardrobeCollectionFrameRightClickDropDown_Init;
 	self.default_category = "HEADSLOT"
-	local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories(app.non_filtered)
+	local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories()
 	self.last_mainhand_category_id = possible_mainhand_categories[1]
 	self.last_secondaryhand_category_id = possible_secondaryhand_categories[1]
 end
@@ -218,7 +218,7 @@ function CA_ItemsCollectionMixin:SetActiveSlot(category)
 		self.active_slot = category
 
 		if self.needs_reload then
-			local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories(app.non_filtered)
+			local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories()
 			self.last_mainhand_category_id = possible_mainhand_categories[1]
 			self.last_secondaryhand_category_id = possible_secondaryhand_categories[1]
 		end
@@ -644,7 +644,7 @@ function CA_WardrobeCollectionFrameWeaponDropDown_Init(self)
 
 	--local isForMainHand = transmogLocation:IsMainHand();
 	--local isForOffHand = transmogLocation:IsOffHand();
-	local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories(app.non_filtered)
+	local possible_mainhand_categories, possible_secondaryhand_categories = app.GetPossibleWeaponCategories()
 	local weapon_categories
 	local active_slot = WardrobeCollectionFrame.ItemsCollectionFrame.active_slot
 	if active_slot == "MAINHANDSLOT" then
@@ -693,7 +693,7 @@ function CA_ItemFilterDropDown_Init(self)
 	local class_name = WrapTextInColorCode(GetClassInfo(class_id), class_color)
 
 	local dropdown = WardrobeCollectionFrameClassDropDown
-	if app.non_filtered then
+	if not app.GetSettings('class_filter_enabled') then
 		UIDropDownMenu_SetText(dropdown, ALL_CLASSES);
 	else
 		UIDropDownMenu_SetText(dropdown, class_name);
@@ -704,12 +704,12 @@ function CA_ItemFilterDropDown_Init(self)
 	info.func = CA_ItemFilterDropDown_OnClick;
 
 	info.text = ALL_CLASSES
-	info.checked = app.non_filtered
+	info.checked = not app.GetSettings('class_filter_enabled')
 	info.arg1 = 1
 	UIDropDownMenu_AddButton(info);
 
 	info.text = class_name
-	info.checked = not app.non_filtered
+	info.checked = app.GetSettings('class_filter_enabled')
 	info.arg1 = 2
 	UIDropDownMenu_AddButton(info);
 
@@ -719,9 +719,9 @@ end
 function CA_ItemFilterDropDown_OnClick(self, arg1, arg2, checked)
 	if not checked then
 		if arg1 == 1 then
-			app.non_filtered = true
+			app.SetSettings('class_filter_enabled', false)
 		elseif arg1 == 2 then
-			app.non_filtered = false
+			app.SetSettings('class_filter_enabled', true)
 		end
 		local dropdown = WardrobeCollectionFrameClassDropDown
 		UIDropDownMenu_SetText(dropdown, self.value)

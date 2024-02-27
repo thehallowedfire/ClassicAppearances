@@ -1,5 +1,9 @@
 local app_name, app = ...
 
+app.DEFAULT_SETTINGS = {
+    ['class_filter_enabled'] = true,
+}
+
 function app.GetCategoryInfo(category_id)
     local category_info = app.DB.CATEGORIES[category_id]
     if category_info then
@@ -27,9 +31,9 @@ function app.GetCategoryID(category)
     end
 end
 
-function app.GetPossibleWeaponCategories(non_filtered)
+function app.GetPossibleWeaponCategories()
     local _, _, class_id = UnitClass("player")
-    if non_filtered == true then
+    if app.GetSettings('class_filter_enabled') == false then
         class_id = 0
     end
     local _, possible_mainhand, possible_secondaryhand = unpack(app.DB.CLASS_PROFICIENCY[class_id])
@@ -37,7 +41,7 @@ function app.GetPossibleWeaponCategories(non_filtered)
 end
 
 function app.GetAppearanceCameraID(appearance_id, category_id)
-    local camera_set -- NEEDS REWORK: various types of weapons
+    local camera_set
 
     -- If Weapons then return universal camera ID
     if category_id >= 13 then
@@ -128,7 +132,7 @@ local function clear_duplicates(t)
 end
 function app.GetVisualsList(category_id)
 	local _, _, class_id = UnitClass("player")
-    if app.non_filtered then
+    if app.GetSettings('class_filter_enabled') == false then
         class_id = 0
     end
 	local armor_types = unpack(app.DB.CLASS_PROFICIENCY[class_id])
@@ -325,4 +329,16 @@ function app.GetItemOwner(item_id)
         end
     end
     return
+end
+
+function app.GetSettings(setting_tag)
+    local parameter = CA_SettingsPerCharacter[setting_tag]
+    if parameter ~= nil then
+        return parameter
+    end
+    return app.DEFAULT_SETTINGS[setting_tag]
+end
+
+function app.SetSettings(setting_tag, value)
+    CA_SettingsPerCharacter[setting_tag] = value
 end

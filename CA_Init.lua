@@ -44,8 +44,6 @@ for i, info in pairs(app.DB.CATEGORIES) do
     end
 end
 
-app.non_filtered = true
-
 C_Timer.After(1, function()
     local name, realm = UnitFullName("player")
     app.player_full_name = name.."-"..realm
