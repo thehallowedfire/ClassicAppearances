@@ -9,7 +9,7 @@ local function HideWardrobeCollectionJournal(self)
     end
 end
 
-function app:init()
+function app.init()
     local tab_id = CollectionsJournal.numTabs + 1;
     local tab = CreateFrame("Button", "$parentTab"..tab_id, CollectionsJournal, "CharacterFrameTabButtonTemplate", tab_id);
     tab:SetPoint("LEFT", "$parentTab" .. (tab_id-1), "RIGHT", -16, 0);

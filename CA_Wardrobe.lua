@@ -108,7 +108,6 @@ function CA_WardrobeCollectionFrameMixin:OnKeyDown(key)
 	end ]]
 end
 
-
 function CA_WardrobeCollectionFrameMixin:UpdateProgressBar(value, max)
 	self.progressBar:SetMinMaxValues(0, max);
 	self.progressBar:SetValue(value);
@@ -188,6 +187,8 @@ end
 
 function CA_ItemsCollectionMixin:OnShow()
 	--self:UpdateWeaponDropDown();
+	app.ScanItems()
+	self:RefreshVisualsList(app.GetCategoryID(self.default_category));
 	self:SetActiveSlot(self.default_category)
 end
 
@@ -250,6 +251,7 @@ function CA_ItemsCollectionMixin:SetActiveCategory(category_id)
 
 		self.active_category_id = category_id
 		self:RefreshVisualsList(category_id);
+
 		for i=1, #self.Models do
 			local model = self.Models[i]
 			model:Reload(category_id)
@@ -279,18 +281,18 @@ function CA_ItemsCollectionMixin:ResetPage()
 	self:UpdateItems();
 end
 
-function CA_ItemsCollectionMixin:RefreshVisualsList(category)
-	self.visuals_list = app.GetVisualsList(category)
+function CA_ItemsCollectionMixin:RefreshVisualsList(category_id)
+	self.visuals_list, self.collected_count, self.collected_visuals_table = app.GetVisualsList(category_id)
 	--self:FilterVisuals();
 	--self:SortVisuals();
 	self.PagingFrame:SetMaxPages(ceil(#self.visuals_list / self.PAGE_SIZE));
 end
 
 function CA_ItemsCollectionMixin:UpdateProgressBar()
-	local collected, total;
-	collected = app.GetCategoryCollectedCount(self.active_category_id);
+	local collected, total
+	collected = self.collected_count
 	total = #self.visuals_list
-	self:GetParent():UpdateProgressBar(collected, total);
+	self:GetParent():UpdateProgressBar(collected, total)
 end
 
 function CA_ItemsCollectionMixin:UpdateItems()
@@ -333,13 +335,15 @@ function CA_ItemsCollectionMixin:UpdateItems()
 			model.appearance_id = appearance_id;
 
 			-- border
-			--[[ if ( not visualInfo.isCollected ) then
+			if ( not self.collected_visuals_table[appearance_id] ) then
 				model.Border:SetAtlas("transmog-wardrobe-border-uncollected");
-			elseif ( not visualInfo.isUsable ) then
-				model.Border:SetAtlas("transmog-wardrobe-border-unusable");
+				model.is_collected = nil
+			--[[ elseif ( not visualInfo.isUsable ) then
+				model.Border:SetAtlas("transmog-wardrobe-border-unusable"); ]]
 			else
 				model.Border:SetAtlas("transmog-wardrobe-border-collected");
-			end ]]
+				model.is_collected = true
+			end
 
 			if ( GameTooltip:GetOwner() == model ) then
 				model:OnEnter();
@@ -420,6 +424,10 @@ function CA_ItemsModelMixin:OnShow()
 end
 
 
+
+local KNOWN_SYMBOL = "\124T".."Interface\\AddOns\\ClassicAppearances\\Assets\\known"..":0\124t"
+local KNOWN_CIRCLE_SYMBOL = "\124T".."Interface\\AddOns\\ClassicAppearances\\Assets\\known_circle"..":0\124t"
+local UNKNOWN_SYMBOL = "\124T".."Interface\\AddOns\\ClassicAppearances\\Assets\\unknown"..":0\124t"
 local NON_EXISTING_ITEMS_CACHE = {}
 local function is_checked_before(id)
     for key, _ in pairs(NON_EXISTING_ITEMS_CACHE) do
@@ -430,19 +438,36 @@ local function is_checked_before(id)
 	NON_EXISTING_ITEMS_CACHE[id] = true
     return false
 end
+local function get_full_name(full_name)
+	local name, server = string.match(full_name, "(.-)%-(.*)")
+	local player_name, player_server = string.match(app.player_full_name, "(.-)%-(.*)")
+	if player_server == server then
+		full_name = name
+	end
+	return full_name
+end
 function CA_ItemsModelMixin:OnEnter()
 	if ( not self.appearance_id ) then
 		return;
 	end
 
+	local right_title = UNKNOWN_SYMBOL.." Not Collected"
+	local color = "ffff9333"
+	if self.is_collected then
+		right_title = KNOWN_CIRCLE_SYMBOL.." Collected"
+		color = "ff15abff"
+	end
+	right_title = WrapTextInColorCode(right_title, color)
+
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
-	GameTooltip:AddLine("Appearance ID: "..tostring(self.appearance_id))
+	GameTooltip:AddDoubleLine("Appearance ID: "..tostring(self.appearance_id), right_title)
 
 	local not_existing_item_ids = {}
-	local item_ids = app.GetAllItemIDsForModel(self)
+	local item_info_cache = {}
+	local item_ids = app.GetAllItemIDsForAppearance(self.appearance_id)
 	for i=1, #item_ids do
 		local item_id = item_ids[i]
-		local expansion = app.GetItemExpansionAndAppearanceID(item_id)
+		local _, expansion = app.GetItemAppearanceIDAndExpansion(item_id)
 		local expansion_text = WrapTextInColorCode("<"..expansion..">", BATTLENET_FONT_COLOR:GenerateHexColor())
 		local _, link = GetItemInfo(item_id)
 		if link then
@@ -458,32 +483,74 @@ function CA_ItemsModelMixin:OnEnter()
 				GameTooltip:AddDoubleLine("<item_link>", expansion_text.." (ID: "..item_id..")")
 			end
 		end
+
+		if self.is_collected then
+			local owner = app.GetItemOwner(item_id)
+			if owner == app.player_full_name then
+				local text = WrapTextInColorCode(KNOWN_SYMBOL.." Collected", "ff15abff")
+				GameTooltipTextRight1:SetText(text)
+			end
+			local text_line = _G["GameTooltipTextRight"..(i + 1)]
+			item_info_cache[i] = {text_line:GetText(), owner}
+		else
+			item_info_cache = {}
+		end
 	end
+
+	self:RegisterEvent("MODIFIER_STATE_CHANGED")
+	self:HookScript("OnEvent", function(self, event, key, down)
+		if self.is_collected and event == "MODIFIER_STATE_CHANGED" and key == "LALT" then
+			if down == 1 then
+				for i=1, #item_info_cache do
+					local owner = item_info_cache[i][2]
+					local text_line = _G["GameTooltipTextRight"..(i + 1)]
+					if owner then
+						if owner == app.player_full_name then
+							text_line:SetText(WrapTextInColorCode(get_full_name(owner).." "..KNOWN_SYMBOL, "ff15abff"))
+						else
+							text_line:SetText(WrapTextInColorCode(get_full_name(owner).." "..KNOWN_CIRCLE_SYMBOL, "ff15abff"))
+						end
+					else
+						text_line:SetText(UNKNOWN_SYMBOL)
+					end
+				end
+			elseif down == 0 then
+				for i=1, #item_info_cache do
+					local text_line = _G["GameTooltipTextRight"..(i + 1)]
+					text_line:SetText(item_info_cache[i][1])
+				end
+				GameTooltip:Show()
+			end
+		end
+	end)
+
 	local non_existing_items_count = 0
 	for _, _ in pairs(not_existing_item_ids) do
 		non_existing_items_count = non_existing_items_count + 1
 	end
 	if non_existing_items_count ~= 0 then
 		self:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-		self:SetScript("OnEvent", function(...)
-			local _, _, item_id_received, success = ...
-			local line_number = not_existing_item_ids[item_id_received]
-			if line_number then
-				local tooltip_line_left = _G["GameTooltipTextLeft"..(line_number + 1)]
-				local tooltip_line_right = _G["GameTooltipTextRight"..(line_number + 1)]
-				local text
-				if not success then
-					text = "<Not in the game yet>"
-					tooltip_line_left:SetTextColor(LIGHTGRAY_FONT_COLOR:GetRGBA())
-					--tooltip_line_right:SetTextColor(LIGHTGRAY_FONT_COLOR:GetRGBA())
-				else
-					local _, link = GetItemInfo(item_id_received)
-					text = link
-					self.item_link = link
-					NON_EXISTING_ITEMS_CACHE[item_id_received] = nil
+		self:HookScript("OnEvent", function(...)
+			local _, event, item_id_received, success = ...
+			if event == "GET_ITEM_INFO_RECEIVED" then
+				local line_number = not_existing_item_ids[item_id_received]
+				if line_number then
+					local tooltip_line_left = _G["GameTooltipTextLeft"..(line_number + 1)]
+					local tooltip_line_right = _G["GameTooltipTextRight"..(line_number + 1)]
+					local text
+					if not success then
+						text = "<Not in the game yet>"
+						tooltip_line_left:SetTextColor(LIGHTGRAY_FONT_COLOR:GetRGBA())
+						--tooltip_line_right:SetTextColor(LIGHTGRAY_FONT_COLOR:GetRGBA())
+					else
+						local _, link = GetItemInfo(item_id_received)
+						text = link
+						self.item_link = link
+						NON_EXISTING_ITEMS_CACHE[item_id_received] = nil
+					end
+					tooltip_line_left:SetText(text)
+					GameTooltip:Show()
 				end
-				tooltip_line_left:SetText(text)
-				GameTooltip:Show()
 			end
 		end)
 	end
@@ -493,6 +560,7 @@ end
 
 function CA_ItemsModelMixin:OnLeave()
 	self:UnregisterEvent("GET_ITEM_INFO_RECEIVED")
+	self:UnregisterEvent("MODIFIER_STATE_CHANGED")
 	GameTooltip:Hide()
 end
 
@@ -501,13 +569,13 @@ function CA_ItemsModelMixin:OnMouseDown(button)
 		local INDENTATION = "   "
 		local THIS_MARK = WrapTextInColorCode("<<<", GREEN_FONT_COLOR:GenerateHexColor())
 
-		local item_ids = app.GetAllItemIDsForModel(self)
+		local item_ids = app.GetAllItemIDsForAppearance(self.appearance_id)
 		if item_ids then
 			print(WrapTextInColorCode("Shared appearances:", NORMAL_FONT_COLOR:GenerateHexColor()))
 			for i=1, #item_ids do
 				local item_id = item_ids[i]
 				local id_text = WrapTextInColorCode("(ID: "..item_id..")", NORMAL_FONT_COLOR:GenerateHexColor())
-				local expansion = app.GetItemExpansionAndAppearanceID(item_id)
+				local _, expansion = app.GetItemAppearanceIDAndExpansion(item_id)
 				local expansion_text = WrapTextInColorCode("<"..expansion..">", BATTLENET_FONT_COLOR:GenerateHexColor())
 				local _, link = GetItemInfo(item_id)
 				if link then

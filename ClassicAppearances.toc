@@ -2,6 +2,8 @@
 ## Notes: Shows all appearances in the game
 ## Author: Vladislav Kondrashov
 ## Version: 1.0
+## SavedVariables: CA_OwnedItems
+## SavedVariablesPerCharacter: CA_SettingsPerCharacter
 
 CA_Wardrobe.xml
 CA_DB.lua
