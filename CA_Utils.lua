@@ -300,7 +300,8 @@ function app.ScanItems(container_type)
         if (item_class == 2 or (item_class == 4 and 1 <= item_subclass and item_subclass <= 6)
                             or inv_type == 'INVTYPE_HOLDABLE'
                             or inv_type == 'INVTYPE_TABARD'
-                            or inv_type == 'INVTYPE_BODY') then
+                            or inv_type == 'INVTYPE_BODY'
+                            or inv_type == 'INVTYPE_HEAD') then
             --[[ local appearance_id = app.GetItemAppearanceIDAndExpansion(item_id)
             if appearance_id then
                 CA_OwnedItems[app.player_full_name][appearance_id] = true

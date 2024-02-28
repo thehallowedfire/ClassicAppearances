@@ -4,6 +4,9 @@ local app_name, app = ...
 if CA_OwnedItems == nil then
     CA_OwnedItems = {}
 end
+if CA_CharactersData == nil then
+    CA_CharactersData = {}
+end
 if CA_SettingsPerCharacter == nil then
     CA_SettingsPerCharacter = {}
 end
@@ -47,5 +50,7 @@ end
 C_Timer.After(1, function()
     local name, realm = UnitFullName("player")
     app.player_full_name = name.."-"..realm
+
+    app.GetCharacterData()
 end)
 

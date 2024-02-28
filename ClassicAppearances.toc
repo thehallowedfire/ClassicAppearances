@@ -2,12 +2,17 @@
 ## Notes: Shows all appearances in the game
 ## Author: Vladislav Kondrashov
 ## Version: 1.0
-## SavedVariables: CA_OwnedItems
+## SavedVariables: CA_OwnedItems, CA_CharactersData
 ## SavedVariablesPerCharacter: CA_SettingsPerCharacter
+
+Libs/LibStub/LibStub.lua
+Libs/AceComm-3.0/AceComm-3.0.xml
+Libs/AceSerializer-3.0/AceSerializer-3.0.xml
 
 CA_Wardrobe.xml
 CA_DB.lua
 CA_Utils.lua
 CA_UI.lua
+CA_DataSync.lua
 
 CA_Init.lua
