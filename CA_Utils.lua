@@ -207,6 +207,9 @@ function app.GetAllItemIDsForAppearance(appearance_id)
 end
 
 function app.GetItemAppearanceIDAndExpansion(item_id)
+    if app.DB.IGNORE_ITEM_IDS[item_id] then
+        return
+    end
     local item_info = app.DB.ITEM_EXPANSIONS_AND_APPEARANCES[item_id]
     if not item_info then
         print("DEBUG GetItemAppearanceIDAndExpansion - Item not found!", item_id)
@@ -225,7 +228,14 @@ end
 function app.ScanItems(container_type)
     if not CA_OwnedItems[app.player_full_name] then
         CA_OwnedItems[app.player_full_name] = {}
+        for i=0, 3 do
+            CA_OwnedItems[app.player_full_name][i] = {}
+        end
     end
+    if not container_type then
+        container_type = 0
+    end
+
     local cached_items = {}
     
     -- Scan mail
@@ -239,6 +249,7 @@ function app.ScanItems(container_type)
                 end
             end
         end
+
     -- Scan bank
     elseif container_type == 2 then
         for slot = 1, C_Container.GetContainerNumSlots(BANK_CONTAINER) do
@@ -293,20 +304,27 @@ function app.ScanItems(container_type)
         end
     end
 
+    -- Flush container data
+    CA_OwnedItems[app.player_full_name][container_type] = {}
+
     -- Filter out cached items without models, find model and save
     for i = 1, #cached_items do
         local item_id = cached_items[i]
         local _, _, _, inv_type, _, item_class, item_subclass = GetItemInfoInstant(item_id)
         if (item_class == 2 or (item_class == 4 and 1 <= item_subclass and item_subclass <= 6)
                             or inv_type == 'INVTYPE_HOLDABLE'
-                            or inv_type == 'INVTYPE_TABARD'
+                            or inv_type == 'INVTYPE_HEAD'
+                            or inv_type == 'INVTYPE_SHOULDER'
                             or inv_type == 'INVTYPE_BODY'
-                            or inv_type == 'INVTYPE_HEAD') then
+                            or inv_type == 'INVTYPE_ROBE'
+                            or inv_type == 'INVTYPE_TABARD'
+                            or inv_type == 'INVTYPE_WAIST'
+                            or inv_type == 'INVTYPE_FEET') then
             --[[ local appearance_id = app.GetItemAppearanceIDAndExpansion(item_id)
             if appearance_id then
                 CA_OwnedItems[app.player_full_name][appearance_id] = true
             end ]]
-            CA_OwnedItems[app.player_full_name][item_id] = true
+            CA_OwnedItems[app.player_full_name][container_type][item_id] = true
         end
     end
 end
@@ -314,9 +332,11 @@ end
 function app.GetIsCollected(appearance_id)
     local item_ids = app.GetAllItemIDsForAppearance(appearance_id)
     for _, item_id in pairs(item_ids) do
-        for char, collected_item_ids in pairs(CA_OwnedItems) do
-            if collected_item_ids[item_id] then
-                return true, char
+        for char, containers in pairs(CA_OwnedItems) do
+            for container, collected_item_ids in pairs(containers) do
+                if collected_item_ids[item_id] then
+                    return true, char
+                end
             end
         end
     end
@@ -324,9 +344,11 @@ function app.GetIsCollected(appearance_id)
 end
 
 function app.GetItemOwner(item_id)
-    for char, collected_item_ids in pairs(CA_OwnedItems) do
-        if collected_item_ids[item_id] then
-            return char
+    for char, containers in pairs(CA_OwnedItems) do
+        for container, collected_item_ids in pairs(containers) do
+            if collected_item_ids[item_id] then
+                return char
+            end
         end
     end
     return

@@ -14,5 +14,6 @@ CA_DB.lua
 CA_Utils.lua
 CA_UI.lua
 CA_DataSync.lua
+CA_Tooltip.lua
 
 CA_Init.lua

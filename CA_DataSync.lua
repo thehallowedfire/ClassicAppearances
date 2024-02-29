@@ -141,12 +141,17 @@ function app.ConvertMessageToTable(message_cache)
 end
 
 function app.SaveNewData(data)
-    for char, item_ids in pairs(data) do
+    for char, containers in pairs(data) do
         if not CA_OwnedItems[char] then
             CA_OwnedItems[char] = {}
         end
-        for item_id, _ in pairs(item_ids) do
-            CA_OwnedItems[char][item_id] = true
+        for container, item_ids in pairs(containers) do
+            if not CA_OwnedItems[char][container] then
+                CA_OwnedItems[char][container] = {}
+            end
+            for item_id, _ in pairs(item_ids) do
+                CA_OwnedItems[char][container][item_id] = true
+            end
         end
     end
     message_cache = {}
@@ -159,18 +164,28 @@ function app.SerializeItems(table)
     if not table then return end
 
     local data_string = ""
-    -- Профессия-Пламегор@5419.42984.48687.15450,Яхтсмен-Пламегор@5419.42984.48687.15450,
-    for char_name, collected_items in pairs(table) do
+    -- Профессия-Пламегор@0&5419.42984,1&48687.15450;Яхтсмен-Пламегор@0&5419.42984,1&48687.15450,2&
+    for char_name, containers in pairs(table) do
         if data_string == "" then
             data_string = char_name .. "@"
         else
-            data_string = data_string .. "," .. char_name .. "@"
+            data_string = data_string .. ";" .. char_name .. "@"
         end
-        for item_id, _ in pairs(collected_items) do
-            data_string = data_string .. item_id .. "."
+        for container, collected_items in pairs(containers) do
+            if data_string:sub(#data_string, #data_string) == "@" then
+                data_string = data_string .. container .. "&"
+            else
+                data_string = data_string .. "," .. container .. "&"
+            end
+            
+            for item_id, _ in pairs(collected_items) do
+                data_string = data_string .. item_id .. "."
+            end
+            -- Remove last dot
+            if data_string:sub(#data_string, #data_string) ~= "&" then
+                data_string = data_string:sub(1, #data_string - 1)
+            end
         end
-        -- Remove last dot
-        data_string = data_string:sub(1, #data_string - 1)
     end
     return data_string
 end
@@ -179,17 +194,33 @@ function app.DeserializeItems(serialized_string)
     if not serialized_string then return false end
 
     local deserialized_data = {}
-    for character_serialized_data in serialized_string:gmatch("[^,]+") do
-        local character_data = {}
-        for part in character_serialized_data:gmatch("[^@]+") do
-            tinsert(character_data, part)
+    for character_data in serialized_string:gmatch("[^;]+") do
+        local t = {}
+        for part in character_data:gmatch("[^@]+") do
+            tinsert(t, part)
         end
-        local char_name = character_data[1]
-        local serialized_item_ids = character_data[2]
+        local char_name = t[1]
+        local all_containers_with_items = t[2]
         deserialized_data[char_name] = {}
-        for item_id in serialized_item_ids:gmatch("[^.]+") do
-            item_id = tonumber(item_id)
-            deserialized_data[char_name][item_id] = true
+
+        t = {}
+        for part in all_containers_with_items:gmatch("[^,]+") do
+            tinsert(t, part)
+        end
+        for _, container_with_items in pairs(t) do
+            local t2 = {}
+            for part in container_with_items:gmatch("[^&]+") do
+                tinsert(t2, part)
+            end
+            local container_id = tonumber(t2[1])
+            local item_ids = t2[2]
+            deserialized_data[char_name][container_id] = {}
+
+            if item_ids then
+                for item_id in item_ids:gmatch("[^.]+") do
+                    deserialized_data[char_name][container_id][tonumber(item_id)] = true
+                end
+            end
         end
     end
 
@@ -211,6 +242,7 @@ local function CheckOnline(player_guid)
     end
 end
 function CA_SYNC(is_response)
+    app.ScanItems()
     local prefix = "send"
     if is_response then
         prefix = "receive"
