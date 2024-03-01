@@ -26,19 +26,19 @@ function app.AddOwnershipInfo(self)
             if not appearance_id then
                 return
             end
-            local is_collected = app.GetIsCollected(appearance_id)
+            local is_collected, char = app.GetIsCollected(appearance_id)
 
             text = UNKNOWN_SYMBOL.." Not Collected"
             local color = "ffff9333"
             if is_collected then
-                text = KNOWN_CIRCLE_SYMBOL.." Collected"
+                text = KNOWN_CIRCLE_SYMBOL.." Collected ("..char..")"
                 color = "ff15abff"
             end
             text = WrapTextInColorCode(text, color)
 
             local owner = app.GetItemOwner(item_id)
             if owner == app.player_full_name then
-                text = WrapTextInColorCode(KNOWN_SYMBOL.." Collected", "ff15abff")
+                text = WrapTextInColorCode(KNOWN_SYMBOL.." Collected ("..char..")", "ff15abff")
             end
 
             ITEMS_CACHE[link] = text

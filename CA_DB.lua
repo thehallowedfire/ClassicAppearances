@@ -50833,4 +50833,5 @@ app.DB.ITEM_EXPANSIONS_AND_APPEARANCES = {
 }
 app.DB.IGNORE_ITEM_IDS = {
     [46349] = true,
+    [49278] = true,
 }
